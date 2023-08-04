@@ -1,6 +1,6 @@
 # update-flex
 
-## update-flex.py usage
+## Usage
 
 ```
 usage: update-flex.py [-h] [-l LANG] [-s SOURCE_CAWL_TYPE]
@@ -26,6 +26,12 @@ optional arguments:
                         The value used in the target's 'type' attribute to
                         designate a CAWL entry. [CAWL]
   -d, --debug
+```
+
+## Run script from repo
+```
+update-flex$ . env/bin/activate
+(env) update-flex$ python3 -c 'import update_flex.app; update_flex.app.main()' [ARGS]
 ```
 
 ### LIFT - Lexical Interchange Format
