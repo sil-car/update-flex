@@ -1,7 +1,7 @@
 # update-flex
 
-# update-flex.py usage
-#
+## update-flex.py usage
+
 ```
 usage: update-flex.py [-h] [-l LANG] [-s SOURCE_CAWL_TYPE]
                       [-t TARGET_CAWL_TYPE] [-d]
@@ -28,12 +28,11 @@ optional arguments:
   -d, --debug
 ```
 
-> Window icon by VisualEditor team - https://git.wikimedia.org/summary/mediawiki%2Fextensions%2FVisualEditor.git, MIT, https://commons.wikimedia.org/w/index.php?curid=26927402
-
-
-## LIFT - Lexical Interchange Format
+### LIFT - Lexical Interchange Format
 A standard format developed and used by SIL for linguistic documentation.
 https://github.com/sillsdev/lift-standard
 
 ### FLEx uses v0.13 as of 2022-03-18
 https://github.com/sillsdev/lift-standard/blob/master/lift_13.pdf
+
+> Window icon by VisualEditor team - https://git.wikimedia.org/summary/mediawiki%2Fextensions%2FVisualEditor.git, MIT, https://commons.wikimedia.org/w/index.php?curid=26927402
