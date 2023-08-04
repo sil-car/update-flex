@@ -1,0 +1,28 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "update-flex"
+version = "0.2"
+authors = [
+    {name = "Nate Marti", email = "nate_marti@sil.org"},
+]
+requires-python = ">=3.7"
+keywords = ["flex", "language", "data", "update"]
+license = {file = "LICENSE"}
+dynamic = ["readme"]
+
+[project.scripts]
+update_flex = "update_flex.main:main"
+
+[tool.setuptools]
+packages = ["update_flex"]
+# package-dir = {"" = "src"}
+license-files = ["LICENSE"]
+
+[tool.setuptools.dynamic]
+readme = {file = ["README.md"], content-type = "text/plain"}
+
+[tool.setuptools.package-data]
+update_flex = ["data/*.ico", "data/*.png", "data/*.svg"]
