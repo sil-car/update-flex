@@ -1,131 +1,120 @@
 import datetime
+import sys
 
 from lxml import etree
 from pathlib import Path
 from sys import exit
+from tkinter import Tk
+from tkinter.ttk import Style
 
-import util
+from . import gui
+from . import util
 
 
-class App():
-    def __init__(self, cli_args):
+class App(Tk):
+    def __init__(self, cli_args, **kwargs):
+        super().__init__(**kwargs)
+        self.classname = kwargs.get('className')
+        self.title("Update fields in FLEx LIFT file")
+
         self.args = cli_args
-        self.debug = True if self.args.debug else False
 
-        self.source_file = None
+        # Define default values.
         self.source_cawl_type_default = 'CAWL'
-        self.source_xml = None
-
-        self.target_file = None
+        self.source_file_default = None
+        self.source_xml_default = None
         self.target_cawl_type_default = 'CAWL'
-        self.target_xml = None
+        self.target_files_default = []
+        self.target_xml_default = None
+        self.updates_default = dict()
 
-        self.lang_default = 'sg'
-        self.lang = self.lang_default
-
-        # Verify virtual environment.
-        util.verify_venv(self.debug)
+        # Set variables to defaults.
+        self.reset_variables()
 
         # Set CAWL types according to passed args.
         self.set_user_options()
 
         # Run GUI if no target_db given.
-        if self.debug:
-            print(f"DEBUG: {self.args = }")
         if not self.args.source_db and self.args.target_db == []:
-            import gui
-            maingui = gui.Gui(self)
-            exit()
+            gui.Gui(self, class_=self.classname)
+            self.mainloop()
 
         # Parse script arguments.
         if self.args.source_db and self.args.target_db == []:
+            # Print source file XML and exit.
             self.target_file = Path(self.args.source_db)
-            self.target_xml = self.get_xml_tree(self.target_file)
-            print(
-                etree.tostring(
-                    self.target_xml, encoding='UTF-8', pretty_print=True, xml_declaration=True
-                ).decode().rstrip()
-            )
+            util.print_xml_tree(util.get_xml_tree(self.target_file))
             exit()
         elif self.args.source_db: # update target file(s)
-            # Set 'type' attribute for CAWL entries.
-            if self.debug:
-                print(f"DEBUG: {self.source_cawl_type = }")
-                print(f"DEBUG: {self.target_cawl_type = }")
-
             # Gather source file data.
             self.source_file = Path(self.args.source_db).resolve()
-            self.source_xml = self.get_xml_tree(self.source_file)
-            if self.args.lang:
-                self.lang = self.args.lang
-                if self.debug:
-                    print(f"DEBUG: from args: {self.lang = }")
-            else:
-                self.lang = self.get_lx_lang(self.source_xml.findall('entry')[0])
-                if self.debug:
-                    print(f"DEBUG: from source file: {self.lang = }")
-                if not self.lang:
+            self.source_xml = util.get_xml_tree(self.source_file)
+            if self.updates.get('glosses') is None:
+                lx_lang = self.get_lx_lang(self.source_xml.findall('entry')[0])
+                if not lx_lang:
                     print(f"ERROR: Source language not found in {self.args.source_db}")
                     exit(1)
+                self.updates['glosses'] = lx_lang
 
             # Gather target files.
-            target_files = [Path(f).resolve() for f in self.args.target_db]
+            self.target_files = [Path(f).resolve() for f in self.args.target_db]
+
+            # Print debug info.
             if self.debug:
-                print(f"DEBUG: {target_files = }")
+                self.print_debug_variables()
 
             # Process files.
-            file_list = '\n'.join([str(f) for f in target_files])
-            print(f"Taking \"{self.lang}\" text from lexical-units and/or glosses from \"{self.source_file}\" to update glosses in:\n{file_list}")
-            for target_file in target_files:
+            file_list = '\n'.join([str(f) for f in self.target_files])
+            print(f"Taking \"{','.join(self.updates.get('glosses'))}\" text from lexical-units and/or glosses from \"{self.source_file}\" to update glosses in:\n{file_list}")
+            for target_file in self.target_files:
                 if self.debug:
                     print(f"DEBUG: {target_file = }")
-                self.target_xml = self.get_xml_tree(target_file)
+                self.target_xml = util.get_xml_tree(target_file)
                 result = self.update_file(target_file)
                 if self.debug:
                     print(f"DEBUG: Update {result = }")
 
+    def print_debug_variables(self):
+        print(f"DEBUG: {self.args = }")
+        print(f"DEBUG: {self.source_file = }")
+        print(f"DEBUG: {self.source_cawl_type = }")
+        print(f"DEBUG: {self.target_cawl_type = }")
+        # print(f"DEBUG: {self.lang = }")
+        print(f"DEBUG: {self.updates = }")
+        print(f"DEBUG: {self.target_files = }")
+
+    def reset_variables(self):
+        self.source_cawl_type = self.source_cawl_type_default
+        self.source_file = self.source_file_default
+        self.source_xml = self.source_xml_default
+        self.target_cawl_type = self.target_cawl_type_default
+        self.target_files = self.target_files_default
+        self.target_xml = self.target_xml_default
+        self.updates = self.updates_default
+
     def set_user_options(self):
+        self.debug = True if self.args.debug else False
+
         # Source CAWL type.
-        if self.args.source_cawl_type:
-            self.source_cawl_type = self.args.source_cawl_type
+        if self.args.source_id_type:
+            self.source_cawl_type = self.args.source_id_type
         else:
             self.source_cawl_type = self.source_cawl_type_default
-        # Language.
-        if self.args.lang:
-            self.lang = self.args.lang
-        else:
-            self.lang = self.lang_default
+        # Language(s).
+        # self.lang = None
+        if self.args.glosses:
+            glosses = util.parse_glosses_string_to_list(self.args.glosses)
+            self.updates['glosses'] = glosses
+            # self.lang = self.args.glosses
+        # Semantic domain.
+        if self.args.semantic_domain:
+            self.updates['semantic-domain'] = self.args.semantic_domain
+
         # Target CAWL type.
-        if self.args.target_cawl_type:
-            self.target_cawl_type = self.args.target_cawl_type
+        if self.args.target_id_type:
+            self.target_cawl_type = self.args.target_id_type
         else:
             self.target_cawl_type = self.target_cawl_type_default
-
-    def get_xml_tree(self, file_object):
-        # Remove existing line breaks to allow pretty_print to work properly later.
-        if self.debug:
-            print(f"DEBUG: {file_object = }")
-        parser = etree.XMLParser(remove_blank_text=True)
-        return etree.parse(str(file_object), parser)
-
-    def get_text_for_lang_and_sense(self, sense, location):
-        text = None
-        if location == 'lexical-unit':
-            entry = sense.getparent()
-            lexical_unit = entry.find('lexical-unit')
-            if lexical_unit is not None:
-                form = lexical_unit.find('form')
-                if form.get('lang') == self.lang:
-                    text = form.find('text').text
-        elif location == 'gloss':
-            glosses = sense.findall('gloss')
-            if glosses is None:
-                glosses = []
-            for g in glosses:
-                if g.get('lang') == self.lang:
-                    text = g.find('text').text
-                    break
-        return text
 
     def get_cawl_from_field(self, field, cawl_type):
         cawl = None
@@ -143,7 +132,7 @@ class App():
         cawls = list(set(cawls))
         return cawls
 
-    def get_glosses(self, cawl_str):
+    def get_glosses(self, cawl_str, lang):
         source_locations = [
             'lexical-unit',
             'gloss',
@@ -154,14 +143,14 @@ class App():
             cawl = self.get_cawl_from_field(field, self.source_cawl_type)
             if cawl == cawl_str:
                 for loc in source_locations:
-                    gloss = self.get_text_for_lang_and_sense(field.getparent(), loc)
+                    gloss = util.get_text_for_lang_and_sense(lang, field.getparent(), loc)
                     if gloss is not None:
                         glosses.append(gloss)
         glosses = list(set(glosses))
         glosses.sort()
         return glosses
 
-    def update_gloss(self, cawl_str, glosses):
+    def update_gloss(self, cawl_str, lang, glosses):
         """Update an existing gloss field or add a new gloss field in the self.target_xml tree."""
         fields = self.target_xml.findall('.//field[@type]')
         for field in fields:
@@ -171,7 +160,7 @@ class App():
                 gloss_exists = False
                 updated = False
                 for g in sense.findall('gloss'):
-                    if g.get('lang') == self.lang:
+                    if g.get('lang') == lang:
                         g_lang = g.find('text')
                         old_g_lang_text = g_lang.text
                         gloss_exists = True
@@ -188,7 +177,7 @@ class App():
                 else:
                     # Create new gloss.
                     gloss = etree.SubElement(sense, 'gloss')
-                    gloss.attrib['lang'] = self.lang
+                    gloss.attrib['lang'] = lang
                     gloss_text = etree.SubElement(gloss, 'text')
                     gloss_text.text = ' ; '.join(glosses)
                     if self.debug:
@@ -215,25 +204,25 @@ class App():
         return lang
 
     def save_xml_to_file(self, infile_path):
-        outfile = util.get_outfile_object(infile_path, self.lang, self.debug)
+        lang_names = '-'.join(self.updates.get('glosses'))
+        outfile = util.get_outfile_object(infile_path, lang_names, self.debug)
         self.target_xml.write(
             str(outfile), encoding='UTF-8', pretty_print=True, xml_declaration=True
         )
         print(f"Updated file saved as \"{outfile}\"")
 
     def update_file(self, target_file):
+        # TODO: Right now this assumes the only update action is "glosses".
         target_cawls = self.get_cawls()
         for cawl in target_cawls:
-            if self.debug:
-                pass
-            #     print(f"DEBUG: {cawl = }")
-            else:
+            if not self.debug:
                 print('.', end='', flush=True)
-            source_glosses = self.get_glosses(cawl)
-            if source_glosses:
-                # if self.debug:
-                #     print(f"DEBUG: {source_glosses = }")
-                self.update_gloss(cawl, source_glosses)
+            langs = self.updates.get('glosses')
+            if langs is not None:
+                for lang in langs:
+                    self.update_glosses(cawl, lang)
+
+            self.update_semantic_domain(cawl)
         if not self.debug:
             print()
 
@@ -244,3 +233,14 @@ class App():
         except Exception as e:
             print(f"ERROR: {e}")
             return False
+
+    def update_glosses(self, cawl, lang):
+        source_glosses = self.get_glosses(cawl, lang)
+        if source_glosses:
+            self.update_gloss(cawl, lang, source_glosses)
+
+    def update_semantic_domain(self, cawl):
+        pass
+
+def main():
+    App(util.parse_cli(), className="Updateflex")
