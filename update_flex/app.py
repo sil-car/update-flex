@@ -6,26 +6,6 @@ from tkinter import Tk
 from . import gui
 from . import util
 
-# from multiprocessing import Pool
-# import copyreg
-# from io import BytesIO
-
-# def element_unpickler(data):
-#     return etree.fromstring(data)
-
-# def element_pickler(element):
-#     return element_unpickler, (etree.tostring(element),)
-
-# copyreg.pickle(etree._Element, element_pickler, element_unpickler)
-
-# def elementtree_unpickler(data):
-#     return etree.parse(BytesIO(data))
-
-# def elementtree_pickler(tree):
-#     return elementtree_unpickler, (etree.tostring(tree),)
-
-# copyreg.pickle(etree._ElementTree, elementtree_pickler, elementtree_unpickler)
-
 
 class App(Tk):
     def __init__(self, cli_args, **kwargs):
@@ -129,39 +109,6 @@ class App(Tk):
         else:
             self.target_cawl_type = self.target_cawl_type_default
 
-    def update_gloss(self, lang, glosses, sense):
-        """Update an existing gloss field or add a new gloss field in the self.target_xml tree."""
-        gloss_exists = False
-        updated = False
-        for g in sense.findall('gloss'):
-            if g.get('lang') == lang:
-                g_lang = g.find('text')
-                old_g_lang_text = g_lang.text
-                gloss_exists = True
-                break
-        if gloss_exists:
-            # Update existing gloss.
-            # TODO: Compare timestamps and only update if newer? Or maybe
-            #   include an option "-u" to update instead of overwrite?
-            g_lang.text = ' ; '.join(glosses)
-            if g_lang.text != old_g_lang_text:
-                if self.debug:
-                    cawl = util.get_cawl_from_sense(sense, self.target_cawl_type)
-                    print(f"Debug: Updated gloss for {cawl = }")
-                updated = True
-        else:
-            # Create new gloss.
-            gloss = etree.SubElement(sense, 'gloss')
-            gloss.attrib['lang'] = lang
-            gloss_text = etree.SubElement(gloss, 'text')
-            gloss_text.text = ' ; '.join(glosses)
-            if self.debug:
-                cawl = util.get_cawl_from_sense(sense, self.target_cawl_type)
-                print(f"Debug: Created gloss for {cawl = }")
-            updated = True
-        if updated:
-            util.update_timestamps(sense)
-
     def save_xml_to_file(self, infile_path):
         tag = '_updated'
         if self.updates.get('semantic-domain'):
@@ -176,41 +123,43 @@ class App(Tk):
         print(f"Updated file saved as \"{outfile}\"")
 
     def update_file(self, target_file):
-        target_cawls = util.get_cawls_from_xml(self.target_cawl_type, self.target_xml)
-        for cawl in target_cawls:
-            # NOTE: Multiprocessing at "sense" level breaks the ability to find the sense's
-            #   parent, i.e. the corresponding "entry".
-            # with Pool(2) as p:
-            #     source_sense, target_sense = p.starmap(
-            #         util.get_sense_from_cawl, [
-            #             (cawl, self.source_cawl_type, self.source_xml),
-            #             (cawl, self.target_cawl_type, self.target_xml),
-            #             ]
-            #         )
-            source_sense = util.get_sense_from_cawl(cawl, self.source_cawl_type, self.source_xml)
-            if source_sense is None:
-                # This sense/CAWL # doesn't exist in the source file.
-                if self.debug:
-                    print(f"Debug: No source sense found for {self.source_cawl_type} = {cawl}")
+        # Gather data from source and target files.
+        target_cawls_dict = util.get_cawl_dict(self.target_xml, self.target_cawl_type)
+        source_cawls_dict = util.get_cawl_dict(self.source_xml, self.source_cawl_type)
+        # Loop through dict for CAWL #s in target file (10x faster than looping through XML).
+        for cawl, target_senses in target_cawls_dict.items():
+            if cawl is None:
                 continue
-            target_sense = util.get_sense_from_cawl(cawl, self.target_cawl_type, self.target_xml)
-            if not self.debug:
-                print('.', end='', flush=True)
-
+            source_senses = source_cawls_dict.get(cawl, [])
+            if len(source_senses) == 0:
+                continue
+            
             # Update glosses.
             for lang in self.updates.get('glosses', []):
-                source_glosses = util.get_glosses_from_sense(lang, source_sense)
-                if source_glosses:
-                    self.update_gloss(lang, source_glosses, target_sense)
+                source_glosses = []
+                for sense in source_senses:
+                    # Combine source file's lexical-unit of same lang and lang's gloss.
+                    source_glosses.extend(util.get_glosses_from_sense(lang, sense))
+                if len(source_glosses) > 0:
+                    for sense in target_senses:
+                        util.update_gloss(lang, source_glosses, sense)
 
             # Update semantic domain.
             if self.updates.get('semantic-domain', False):
-                source_semantic_domain = util.get_semantic_domain_from_sense(source_sense)
-                if source_semantic_domain:
-                    util.update_semantic_domain(source_semantic_domain, target_sense)
-
-        if not self.debug:
-            print()
+                source_semantic_domains = []
+                for sense in source_senses:
+                    sd = util.get_semantic_domain_from_sense(sense)
+                    if sd is not None:
+                        source_semantic_domains.append(sd)
+                source_semantic_domains = list(set(source_semantic_domains))
+                if len(source_semantic_domains) > 0:
+                    source_semantic_domains.sort()
+                    for sense in target_senses:
+                        sd_string = ' ; '.join(source_semantic_domains)
+                        # Replace semantic domain value in target.
+                        #   NOTE: Is it worth comparing with existing value before replacing?
+                        #   E.g. Many files have the same SD #, but use either FR or EN text with it.
+                        util.update_semantic_domain(sd_string, sense)
 
         # Create updated target file, preserving original.
         try:
