@@ -170,6 +170,7 @@ def parse_cli():
     )
     parser.add_argument(
         '-d', '--debug',
+        help=argparse.SUPPRESS,
         action='store_true',
     )
     parser.add_argument(
@@ -186,7 +187,7 @@ def parse_cli():
     )
     parser.add_argument(
         '-s', '--semantic-domain',
-        help="Update semantic domain info from source file to target file(s)",
+        help="Update semantic domain info from source file to target file(s).",
         action='store_true',
     )
     return parser.parse_args()
