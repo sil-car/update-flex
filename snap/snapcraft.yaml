@@ -1,0 +1,52 @@
+name: update-flex
+summary: Perfrom mass updates of FLEx LIFT file fields
+website: https://github.com/sil-car/update-flex
+contact: https://github.com/sil-car/update-flex/issues
+issues: https://github.com/sil-car/update-flex/issues
+icon: snap/gui/update-flex.svg
+license: MIT
+title: UpdateFLEx
+description: |
+  Update fields from a source LIFT file to a target LIFT file, matched by user-supplied ID field.
+adopt-info: update-flex # for version and grade
+confinement: strict
+# core22 migration:
+#   https://forum.snapcraft.io/t/micro-howto-migrate-from-core20-to-core22/30188
+base: core22
+architectures:
+  - amd64
+  - arm64
+
+layout:
+  /usr/share/tcltk:
+    symlink: $SNAP/usr/share/tcltk
+
+apps:
+  update-flex:
+    # When a separate gui command was used the icon wasn't properly shown in panel.
+    command: bin/update-flex
+    environment:
+      # https://forum.snapcraft.io/t/modulenotfounderror-no-module-named-tkinter/28707/4
+      PYTHONPATH: $PYTHONPATH:$SNAP/usr/lib/python3.10:$SNAP/usr/lib/python3.10/lib-dynload
+    extensions: [gnome]
+
+parts:
+  update-flex:
+    plugin: python
+    source: https://github.com/sil-car/update-flex.git
+    override-pull: |
+      craftctl default
+      snap_ver=$(grep 'version =' $CRAFT_PART_SRC/pyproject.toml | sed -r 's/^version = "(.*)"/\1/')
+      craftctl set version="${snap_ver}"
+      craftctl set grade="stable"
+    build-packages:
+      - python3-pip
+    override-build: |
+      # Install dephell to convert pyproject.toml to setup.py, which is req'd. by snapcraftctl.
+      # https://forum.snapcraft.io/t/building-a-core20-python-snap-using-pyproject-toml/22028/2
+      pip3 install --user dephell[full]
+      $HOME/.local/bin/dephell deps convert --from-path=pyproject.toml --from-format=poetry --to-path=setup.py --to-format=setuppy
+      craftctl default
+    stage-packages:
+      - python3-tk
+      - tcl8.6

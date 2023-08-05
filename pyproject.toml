@@ -25,4 +25,4 @@ license-files = ["LICENSE"]
 readme = {file = ["README.md"], content-type = "text/plain"}
 
 [tool.setuptools.package-data]
-update_flex = ["data/*.ico", "data/*.png", "data/*.svg"]
+update_flex = ["data/*.ico", "data/*.png"]

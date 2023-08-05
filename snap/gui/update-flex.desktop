@@ -1,0 +1,11 @@
+[Desktop Entry]
+Name=UpdateFLEx
+Comment=Mass updates of fields in a FLEx LIFT file
+Exec=update-flex
+Terminal=false
+Type=Application
+StartupNotify=false
+Icon=${SNAP}/meta/gui/update-flex.svg
+Categories=Utility;
+# Keywords=Unicode;Convert;Lookup;Reference;
+StartupWMClass=updateflex
