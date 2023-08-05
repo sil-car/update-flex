@@ -18,7 +18,7 @@ def get_unicode(text):
 
 def parse_glosses_string_to_list(glosses_string):
     d = ' '
-    glosses = re.sub(r'[^a-z]', d, glosses_string.lower()).split(d)
+    glosses = re.sub(r'[^a-z]+', d, glosses_string.lower()).split(d)
     glosses = list(set(glosses))
     glosses.sort()
     return glosses
