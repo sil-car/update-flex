@@ -14,7 +14,7 @@ license = {file = "LICENSE"}
 dynamic = ["readme"]
 
 [project.scripts]
-update-flex = "update_flex.main:main"
+update-flex = "update_flex.app:main"
 
 [tool.setuptools]
 packages = ["update_flex"]
