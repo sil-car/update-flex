@@ -11,6 +11,7 @@ authors = [
 requires-python = ">=3.7"
 keywords = ["flex", "language", "data", "update"]
 license = {file = "LICENSE"}
+dependencies = ["lxml"]
 dynamic = ["readme"]
 
 [project.scripts]
