@@ -1,0 +1,1 @@
+- [ ] Add tooltips to entry fields that give examples/explanation.
