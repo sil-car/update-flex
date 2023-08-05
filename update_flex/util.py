@@ -1,20 +1,34 @@
 import argparse
+import datetime
 import re
 
 from lxml import etree
-from pathlib import Path
 
 
-def get_outfile_object(old_file_obj, lang_names, debug):
-    new_file_name = f"{old_file_obj.stem}_updated-{lang_names}.lift"
+def get_outfile_object(old_file_obj, tag, debug):
+    new_file_name = f"{old_file_obj.stem}{tag}.lift"
     new_file_obj = old_file_obj.with_name(new_file_name)
     if debug:
-        print(f"DEBUG: {str(new_file_obj) = }")
+        print(f"Debug: {str(new_file_obj) = }")
     return new_file_obj
 
 def get_unicode(text):
     unicode = "".join(map(lambda c: rf"\u{ord(c):04x}", text))
     return unicode
+
+def parse_glosses_string_to_list(glosses_string):
+    d = ' '
+    glosses = re.sub(r'[^a-z]', d, glosses_string.lower()).split(d)
+    glosses = list(set(glosses))
+    glosses.sort()
+    return glosses
+
+def update_timestamps(sense):
+    now_utc = datetime.datetime.now(datetime.timezone.utc)
+    timestamp = now_utc.strftime('%Y-%m-%dT%H:%M:%SZ')
+    sense.attrib['dateModified'] = timestamp
+    entry = sense.getparent()
+    entry.attrib['dateModified'] = timestamp
 
 def get_xml_tree(file_object):
     # Remove existing line breaks to allow pretty_print to work properly later.
@@ -28,31 +42,116 @@ def print_xml_tree(xml_tree):
         ).decode().rstrip()
     )
 
-def parse_glosses_string_to_list(glosses_string):
-    d = ' '
-    glosses = re.sub(r'[^a-z]', d, glosses_string.lower()).split(d)
+def get_lx_lang(xml_entry):
+    lang = None
+    lexical_unit = xml_entry.find('lexical-unit')
+    if len(lexical_unit) > 0:
+        form = lexical_unit.find('form')
+        if len(form) > 0:
+            lang = form.get('lang')
+    return lang
+
+def get_glosses_from_sense(lang, sense):
+    glosses = []
+    gloss = get_lang_lexical_unit_from_sense(sense, lang)
+    if gloss is not None:
+        glosses.append(gloss)
+    gloss = get_lang_gloss_from_sense(sense, lang)
+    if gloss is not None:
+        glosses.append(gloss)
     glosses = list(set(glosses))
     glosses.sort()
     return glosses
 
-def get_text_for_lang_and_sense(lang, sense, location):
+def get_cawls_from_xml(cawl_type, xml_tree):
+    cawls = []
+    fields = xml_tree.findall('.//field[@type]')
+    for field in fields:
+        cawl = get_cawl_from_field(field, cawl_type)
+        if cawl:
+            cawls.append(cawl)
+    cawls = list(set(cawls))
+    return cawls
+
+def get_lang_lexical_unit_from_sense(sense, lang):
     text = None
-    if location == 'lexical-unit':
-        entry = sense.getparent()
-        lexical_unit = entry.find('lexical-unit')
-        if lexical_unit is not None:
-            form = lexical_unit.find('form')
-            if form.get('lang') == lang:
-                text = form.find('text').text
-    elif location == 'gloss':
-        glosses = sense.findall('gloss')
-        if glosses is None:
-            glosses = []
-        for g in glosses:
-            if g.get('lang') == lang:
-                text = g.find('text').text
-                break
+    entry = sense.getparent()
+    lexical_unit = entry.find('lexical-unit')
+    if lexical_unit is not None:
+        form = lexical_unit.find('form')
+        if form.get('lang') == lang:
+            text = form.find('text').text
     return text
+
+def get_lang_gloss_from_sense(sense, lang):
+    text = None
+    glosses = sense.findall('gloss')
+    if glosses is None:
+        glosses = []
+    for g in glosses:
+        if g.get('lang') == lang:
+            text = g.find('text').text
+            break
+    return text
+
+def get_cawl_from_field(field, cawl_type):
+    cawl = None
+    if field.get('type') == cawl_type:
+        cawl = field.find('form').find('text').text.strip()
+    return cawl
+
+def get_sense_from_cawl(cawl_str, cawl_type, xml_tree):
+    sense = None
+    fields = xml_tree.findall('.//field[@type]')
+    for field in fields:
+        cawl = get_cawl_from_field(field, cawl_type)
+        if cawl == cawl_str:
+            sense = field.getparent()
+            break
+    return sense
+
+def get_cawl_from_sense(sense, cawl_type):
+    cawl = None
+    fields = sense.findall('.//field[@type]')
+    for field in fields:
+        cawl = get_cawl_from_field(field, cawl_type)
+        if cawl:
+            break
+    return cawl
+
+def get_semantic_domain_from_sense(sense):
+    value = None
+    traits = sense.findall("trait")
+    for trait in traits:
+        if trait.get('name') == "semantic-domain-ddp4":
+            value = trait.get('value')
+            break
+    return value
+
+def update_semantic_domain(updated_semantic_domain, sense):
+    """Update an existing semantic domain field or add a new one in the given sense."""
+    semantic_domain_trait = None
+    updated = False
+    for t in sense.findall('trait'):
+        if t.get('name') == 'semantic-domain-ddp4':
+            old_semantic_domain = t.get('value')
+            semantic_domain_trait = t
+            break
+    if semantic_domain_trait is not None:
+        # Update existing gloss.
+        # TODO: Compare timestamps and only update if newer? Or maybe
+        #   include an option "-u" to update instead of overwrite?
+        semantic_domain_trait.attrib['value'] = updated_semantic_domain
+        if updated_semantic_domain != old_semantic_domain:
+            updated = True
+    else:
+        # Create new semantic domain trait.
+        trait = etree.SubElement(sense, 'trait')
+        trait.attrib['name'] = 'semantic-domain-ddp4'
+        trait.attrib['value'] = updated_semantic_domain
+        updated = True
+    if updated:
+        update_timestamps(sense)
 
 def parse_cli():
     # Define arguments and options.

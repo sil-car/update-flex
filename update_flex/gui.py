@@ -1,9 +1,8 @@
-import tkinter as tk
-
 from pathlib import Path
 from threading import Thread
 from tkinter import filedialog
 from tkinter import IntVar
+from tkinter import TclError
 from tkinter.ttk import Button
 from tkinter.ttk import Checkbutton
 from tkinter.ttk import Entry
@@ -50,7 +49,7 @@ class Gui(Frame):
         self.source_btn.bind("<ButtonRelease>", self.get_source_file)
         # Row 1: Create Source ID Entry.
         self.source_ent = Entry(self)
-        self.source_ent.insert(tk.END, self.app.source_cawl_type)
+        self.source_ent.insert('end', self.app.source_cawl_type)
         self.source_ent.grid(column=2, row=1, padx=pad, pady=pady, sticky='W')
         self.source_ent.bind("<FocusOut>", self.on_source_ent_focusout)
         self.source_ent.bind("<Control-a>", self.ctrl_a)
@@ -64,7 +63,7 @@ class Gui(Frame):
         self.target_btn.bind("<ButtonRelease>", self.get_target_file)
         # Row 2: Create Target ID Entry.
         self.target_ent = Entry(self)
-        self.target_ent.insert(tk.END, self.app.target_cawl_type)
+        self.target_ent.insert('end', self.app.target_cawl_type)
         self.target_ent.grid(column=2, row=2, padx=pad, pady=pady, sticky='w')
         self.target_ent.bind("<FocusOut>", self.on_target_ent_focusout)
         self.target_ent.bind("<Control-a>", self.ctrl_a)
@@ -97,7 +96,7 @@ class Gui(Frame):
 
         # Row 7: Create Update Button.
         self.update_btn = Button(
-            self, padding=pad, text="Update LIFT File", state=tk.DISABLED
+            self, padding=pad, text="Update LIFT File", state='disabled'
         )
         self.update_btn.grid(column=0, row=7, padx=pad, pady=pady, sticky='W')
         self.update_btn.bind("<ButtonRelease>", self.on_update_btn_release)
@@ -123,23 +122,14 @@ class Gui(Frame):
         self.after(50, self.select_all, event.widget)
 
     def on_source_ent_focusout(self, event):
-        source_cawl = event.widget.get()
-        if source_cawl is not None:
-            self.app.source_cawl_type = source_cawl
         # Ensure no text is selected.
         event.widget.select_range(0, 0)
 
     def on_lang_ent_focusout(self, event):
-        lang = event.widget.get()
-        if lang is not None:
-            self.app.updates['glosses'] = util.parse_glosses_string_to_list(lang)
         # Ensure no text is selected.
         event.widget.select_range(0, 0)
 
     def on_target_ent_focusout(self, event):
-        target_cawl = event.widget.get()
-        if target_cawl is not None:
-            self.app.target_cawl_type = target_cawl
         # Ensure no text is selected.
         event.widget.select_range(0, 0)
 
@@ -148,19 +138,33 @@ class Gui(Frame):
         if self.app.source_file is None and len(self.app.target_files) != 1:
             # Ignore button press: should be disabled, but callback is still called.
             return
+
+        # Get CAWL types.
+        source_cawl = self.source_ent.get()
+        if source_cawl is not None:
+            self.app.source_cawl_type = source_cawl
+        target_cawl = self.target_ent.get()
+        if target_cawl is not None:
+            self.app.target_cawl_type = target_cawl
+
         # Read checkbox states.
         if self.g_selected.get() == 1:
-            self.app.updates['glosses'] = self.lang_ent.get()
+            self.app.updates['glosses'] = util.parse_glosses_string_to_list(self.lang_ent.get())
         if self.s_selected.get() == 1:
             self.app.updates['semantic-domain'] = True
+
         # Disable all Widgets.
         for f in self.winfo_children():
+            try:
+                f['state'] = 'disabled'
+            except TclError:
+                pass
             for w in f.winfo_children():
-                # w.configure(state=tk.DISABLED)
                 w['state'] = 'disabled'
         self.update_btn.configure(text="Updating...")
         if self.app.debug:
             self.app.print_debug_variables()
+
         # Start update in own thread.
         t_update = Thread(target=self.update_file)
         t_update.start()
@@ -172,7 +176,6 @@ class Gui(Frame):
             filetypes=[('LIFT', '.lift')],
         )
         if selected_file:
-            # event.widget.configure(text=Path(selected_file).name)
             event.widget['text'] = Path(selected_file).name
             self.app.source_file = Path(selected_file)
             self.app.source_xml = util.get_xml_tree(self.app.source_file)
@@ -184,7 +187,6 @@ class Gui(Frame):
             filetypes=[('LIFT', '.lift')],
         )
         if selected_file:
-            # event.widget.configure(text=Path(selected_file).name)
             event.widget['text'] = Path(selected_file).name
             self.app.target_files = [Path(selected_file)]
             self.app.target_xml = util.get_xml_tree(self.app.target_files[0])
@@ -208,17 +210,21 @@ class Gui(Frame):
 
         # Re-enable all widgets.
         for f in self.winfo_children():
+            try:
+                f['state'] = 'normal'
+            except TclError:
+                pass
             for w in f.winfo_children():
                 w['state'] = 'normal'
 
         # Reset widgets.
         self.source_btn['text'] = self.source_label
         self.source_ent.delete(0, len(self.source_ent.get()))
-        self.source_ent.insert(tk.END, self.app.source_cawl_type)
+        self.source_ent.insert('end', self.app.source_cawl_type)
 
         self.target_btn['text'] = self.target_label
         self.target_ent.delete(0, len(self.target_ent.get()))
-        self.target_ent.insert(tk.END, self.app.target_cawl_type)
+        self.target_ent.insert('end', self.app.target_cawl_type)
 
         if self.g_selected.get() == 1:
             self.g_chbox.invoke()
