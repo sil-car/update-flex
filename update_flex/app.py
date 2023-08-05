@@ -139,6 +139,7 @@ class App(Tk):
                 source_glosses = []
                 for sense in source_senses:
                     # Combine source file's lexical-unit of same lang and lang's gloss.
+                    #   NOTE: Is it worth comparing with existing value before replacing?
                     source_glosses.extend(util.get_glosses_from_sense(lang, sense))
                 if len(source_glosses) > 0:
                     for sense in target_senses:
