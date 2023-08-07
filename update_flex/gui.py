@@ -1,3 +1,4 @@
+from os import environ
 from pathlib import Path
 from threading import Thread
 from tkinter import filedialog
@@ -178,7 +179,7 @@ class Gui(Frame):
     def get_source_file(self, event):
         selected_file = filedialog.askopenfilename(
             title=self.source_label,
-            initialdir=Path.home(),
+            initialdir=environ.get('SNAP_REAL_HOME', Path.home()),
             filetypes=[('LIFT', '.lift')],
         )
         if selected_file:
