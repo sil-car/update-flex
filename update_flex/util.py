@@ -116,7 +116,7 @@ def get_semantic_domain_from_sense(sense):
             break
     return value
 
-def update_gloss(lang, glosses, sense):
+def update_gloss(lang, glosses, sense, allow_overwrite):
     """Update an existing gloss field or add a new gloss field in the self.target_xml tree."""
     gloss_exists = False
     updated = False
@@ -126,7 +126,7 @@ def update_gloss(lang, glosses, sense):
             old_g_lang_text = g_lang.text
             gloss_exists = True
             break
-    if gloss_exists:
+    if gloss_exists and allow_overwrite:
         # Update existing gloss.
         # TODO: Compare timestamps and only update if newer? Or maybe
         #   include an option "-u" to update instead of overwrite?
@@ -143,7 +143,7 @@ def update_gloss(lang, glosses, sense):
     if updated:
         update_timestamps(sense)
 
-def update_semantic_domain(updated_semantic_domain, sense):
+def update_semantic_domain(updated_semantic_domain, sense, allow_overwrite):
     """Update an existing semantic domain field or add a new one in the given sense."""
     semantic_domain_trait = None
     updated = False
@@ -152,8 +152,8 @@ def update_semantic_domain(updated_semantic_domain, sense):
             old_semantic_domain = t.get('value')
             semantic_domain_trait = t
             break
-    if semantic_domain_trait is not None:
-        # Update existing gloss.
+    if semantic_domain_trait is not None and allow_overwrite:
+        # Update existing semantic domain.
         # TODO: Compare timestamps and only update if newer? Or maybe
         #   include an option "-u" to update instead of overwrite?
         semantic_domain_trait.attrib['value'] = updated_semantic_domain
@@ -199,6 +199,11 @@ def parse_cli():
     parser.add_argument(
         '-I', '--target-id-type',
         help="The value used in the target's 'type' attribute to designate a CAWL entry. [CAWL]",
+    )
+    parser.add_argument(
+        '-o', '--allow-overwrite',
+        help="Allow glosses in target file(s) to be overwritten. [False]",
+        action='store_true',
     )
     parser.add_argument(
         '-s', '--semantic-domain',

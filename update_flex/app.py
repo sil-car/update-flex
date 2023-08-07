@@ -102,6 +102,9 @@ class App(Tk):
         # Semantic domain.
         if self.args.semantic_domain:
             self.updates['semantic-domain'] = self.args.semantic_domain
+        # Allow overwrite?
+        if self.args.allow_overwrite:
+            self.updates['allow-overwrite'] = self.args.allow_overwrite
 
         # Target CAWL type.
         if self.args.target_id_type:
@@ -143,7 +146,7 @@ class App(Tk):
                     source_glosses.extend(util.get_glosses_from_sense(lang, sense))
                 if len(source_glosses) > 0:
                     for sense in target_senses:
-                        util.update_gloss(lang, source_glosses, sense)
+                        util.update_gloss(lang, source_glosses, sense, self.updates.get('allow-overwrite', False))
 
             # Update semantic domain.
             if self.updates.get('semantic-domain', False):
@@ -160,7 +163,8 @@ class App(Tk):
                         # Replace semantic domain value in target.
                         #   NOTE: Is it worth comparing with existing value before replacing?
                         #   E.g. Many files have the same SD #, but use either FR or EN text with it.
-                        util.update_semantic_domain(sd_string, sense)
+                        allow_overwrite = True
+                        util.update_semantic_domain(sd_string, sense, allow_overwrite)
 
         # Create updated target file, preserving original.
         try:

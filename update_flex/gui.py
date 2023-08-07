@@ -88,6 +88,10 @@ class Gui(Frame):
         self.lang_ent.grid(column=1, row=5, padx=pad, pady=pady, sticky='W')
         self.lang_ent.bind("<FocusOut>", self.on_lang_ent_focusout)
         self.lang_ent.bind("<Control-a>", self.ctrl_a)
+        # Row 5: Create Overwrite Checkbox.
+        self.o_selected = IntVar()
+        self.o_chbox = Checkbutton(self, text="Allow overwriting?", variable=self.o_selected)
+        self.o_chbox.grid(column=2, row=5, padx=pad, pady=pady, sticky='W')
 
         # Row 6: Create SematicDomain Checkbox.
         self.s_selected = IntVar()
@@ -152,6 +156,8 @@ class Gui(Frame):
             self.app.updates['glosses'] = util.parse_glosses_string_to_list(self.lang_ent.get())
         if self.s_selected.get() == 1:
             self.app.updates['semantic-domain'] = True
+        if self.o_selected.get() == 1:
+            self.app.updates['allow-overwrite'] = True
 
         # Disable all Widgets.
         for f in self.winfo_children():
@@ -233,6 +239,9 @@ class Gui(Frame):
         if self.s_selected.get() == 1:
             self.s_chbox.invoke()
             self.s_selected.set(0)
+        if self.o_selected.get() == 1:
+            self.o_chbox.invoke()
+            self.o_selected.set(0)
         self.update_btn['text'] = "Update LIFT file"
         self.update_btn['state'] = 'disabled'
         self.status_lab['text'] = ''
