@@ -126,13 +126,14 @@ def update_gloss(lang, glosses, sense, allow_overwrite):
             old_g_lang_text = g_lang.text
             gloss_exists = True
             break
-    if gloss_exists and allow_overwrite:
-        # Update existing gloss.
-        # TODO: Compare timestamps and only update if newer? Or maybe
-        #   include an option "-u" to update instead of overwrite?
-        g_lang.text = ' ; '.join(glosses)
-        if g_lang.text != old_g_lang_text:
-            updated = True
+    if gloss_exists:
+        if allow_overwrite:
+            # Update existing gloss.
+            # TODO: Compare timestamps and only update if newer? Or maybe
+            #   include an option "-u" to update instead of overwrite?
+            g_lang.text = ' ; '.join(glosses)
+            if g_lang.text != old_g_lang_text:
+                updated = True
     else:
         # Create new gloss.
         gloss = etree.SubElement(sense, 'gloss')
