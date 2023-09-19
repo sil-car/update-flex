@@ -1,3 +1,6 @@
+# Repo-specific.
+*_updated*.lift
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
