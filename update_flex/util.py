@@ -66,15 +66,26 @@ def get_lx_lang(xml_entry):
     return lang
 
 def get_glosses_from_sense(lang, sense):
-    glosses = []
-    gloss = get_lang_lexical_unit_from_sense(sense, lang)
-    if gloss is not None:
-        glosses.append(gloss)
+    glosses_raw = []
+    if lang == 'sg': # get lexical-unit text if Source is in Sango
+        gloss = get_lang_lexical_unit_from_sense(sense, lang)
+        if gloss is not None:
+            glosses_raw.append(gloss)
     gloss = get_lang_gloss_from_sense(sense, lang)
     if gloss is not None:
-        glosses.append(gloss)
+        glosses_raw.append(gloss)
+    glosses_raw = list(set(glosses_raw))
+    glosses_raw.sort()
+
+    # Consolidate repeated terms in glosses.
+    glosses = []
+    for g_raw in glosses_raw:
+        gs = g_raw.split(';')
+        gs = list(set([g.strip() for g in gs]))
+        glosses.extend(gs)
     glosses = list(set(glosses))
     glosses.sort()
+
     return glosses
 
 def get_lang_lexical_unit_from_sense(sense, lang):
@@ -94,7 +105,7 @@ def get_lang_gloss_from_sense(sense, lang):
         glosses = []
     for g in glosses:
         if g.get('lang') == lang:
-            text = g.find('text').text
+            text = g.find('text').text # returns first matching gloss
             break
     return text
 
