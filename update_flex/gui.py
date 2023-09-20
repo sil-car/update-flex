@@ -144,6 +144,16 @@ class Gui(Frame):
             # Ignore button press: should be disabled, but callback is still called.
             return
 
+        # Export to pretty-print LIFT if Source is chosen but not Target.
+        if self.app.source_file is not None and len(self.app.target_files) == 0:
+            xml_string = util.xml_tree_to_string(util.get_xml_tree(self.app.source_file))
+            new_file_name = f"{self.app.source_file.stem}_formatted.lift"
+            new_file_obj = self.app.source_file.with_name(new_file_name)
+            if self.app.debug:
+                print(f"Debug: {str(new_file_obj) = }")
+            new_file_obj.write_text(xml_string)
+            return
+
         # Get CAWL types.
         source_cawl = self.source_ent.get()
         if source_cawl is not None:

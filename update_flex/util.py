@@ -50,6 +50,12 @@ def print_xml_tree(xml_tree):
         ).decode().rstrip()
     )
 
+def xml_tree_to_string(xml_tree):
+    xml_string = etree.tostring(
+        xml_tree, encoding='UTF-8', pretty_print=True, xml_declaration=True
+    ).decode().rstrip()
+    return xml_string
+
 def get_lx_lang(xml_entry):
     lang = None
     lexical_unit = xml_entry.find('lexical-unit')
