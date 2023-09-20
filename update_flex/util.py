@@ -124,19 +124,33 @@ def get_cawl_from_sense(sense, cawl_type):
             break
     return cawl
 
-def get_semantic_domain_from_sense(sense):
-    value = None
+def get_semantic_domains_from_sense(sense):
+    semantic_domains_raw = []
     traits = sense.findall("trait")
     for trait in traits:
         if trait.get('name') == "semantic-domain-ddp4":
-            value = trait.get('value')
-            break
-    return value
+            sd = trait.get('value')
+            if sd is not None:
+                semantic_domains_raw.append(sd)
+    semantic_domains_raw = list(set(semantic_domains_raw))
+    semantic_domains_raw.sort()
+
+    # Consolidate repeated terms.
+    semantic_domains = []
+    for sd_raw in semantic_domains_raw:
+        sds = sd_raw.split(';')
+        sds = list(set([sd.strip() for sd in sds]))
+        semantic_domains.extend(sds)
+    semantic_domains = list(set(semantic_domains))
+    semantic_domains.sort()
+
+    return semantic_domains
 
 def update_gloss(lang, glosses, sense, allow_overwrite):
     """Update an existing gloss field or add a new gloss field in the self.target_xml tree."""
     gloss_exists = False
     updated = False
+    glosses_text = ' ; '.join(glosses)
     for g in sense.findall('gloss'):
         if g.get('lang') == lang:
             g_lang = g.find('text')
@@ -148,7 +162,7 @@ def update_gloss(lang, glosses, sense, allow_overwrite):
             # Update existing gloss.
             # TODO: Compare timestamps and only update if newer? Or maybe
             #   include an option "-u" to update instead of overwrite?
-            g_lang.text = ' ; '.join(glosses)
+            g_lang.text = glosses_text
             if g_lang.text != old_g_lang_text:
                 updated = True
     else:
@@ -156,32 +170,34 @@ def update_gloss(lang, glosses, sense, allow_overwrite):
         gloss = etree.SubElement(sense, 'gloss')
         gloss.attrib['lang'] = lang
         gloss_text = etree.SubElement(gloss, 'text')
-        gloss_text.text = ' ; '.join(glosses)
+        gloss_text.text = glosses_text
         updated = True
     if updated:
         update_timestamps(sense)
 
-def update_semantic_domain(updated_semantic_domain, sense, allow_overwrite):
+def update_semantic_domain(semantic_domains, sense, allow_overwrite):
     """Update an existing semantic domain field or add a new one in the given sense."""
     semantic_domain_trait = None
     updated = False
+    sd_trait_text = ' ; '.join(semantic_domains)
     for t in sense.findall('trait'):
         if t.get('name') == 'semantic-domain-ddp4':
             old_semantic_domain = t.get('value')
             semantic_domain_trait = t
             break
-    if semantic_domain_trait is not None and allow_overwrite:
-        # Update existing semantic domain.
-        # TODO: Compare timestamps and only update if newer? Or maybe
-        #   include an option "-u" to update instead of overwrite?
-        semantic_domain_trait.attrib['value'] = updated_semantic_domain
-        if updated_semantic_domain != old_semantic_domain:
-            updated = True
+    if semantic_domain_trait is not None:
+        if allow_overwrite:
+            # Update existing semantic domain.
+            # TODO: Compare timestamps and only update if newer? Or maybe
+            #   include an option "-u" to update instead of overwrite?
+            semantic_domain_trait.attrib['value'] = sd_trait_text
+            if semantic_domain_trait.attrib['value'] != old_semantic_domain:
+                updated = True
     else:
         # Create new semantic domain trait.
         trait = etree.SubElement(sense, 'trait')
         trait.attrib['name'] = 'semantic-domain-ddp4'
-        trait.attrib['value'] = updated_semantic_domain
+        trait.attrib['value'] = sd_trait_text
         updated = True
     if updated:
         update_timestamps(sense)

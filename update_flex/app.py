@@ -137,6 +137,10 @@ class App(Tk):
             
             # Update glosses.
             for lang in self.updates.get('glosses', []):
+                allow_overwrite = self.updates.get('allow-overwrite', False)
+                if lang == 'sg':
+                    print(f"Language is {lang}: automatically overwriting gloss for {cawl}")
+                    allow_overwrite = True
                 source_glosses = []
                 for sense in source_senses:
                     # Combine source file's lexical-unit of same lang and lang's gloss.
@@ -147,25 +151,23 @@ class App(Tk):
                 source_glosses.sort()
                 if len(source_glosses) > 0:
                     for sense in target_senses:
-                        util.update_gloss(lang, source_glosses, sense, self.updates.get('allow-overwrite', False))
+                        util.update_gloss(lang, source_glosses, sense, allow_overwrite)
 
             # Update semantic domain.
             if self.updates.get('semantic-domain', False):
+                allow_overwrite = True # always overwrite
                 source_semantic_domains = []
                 for sense in source_senses:
-                    sd = util.get_semantic_domain_from_sense(sense)
-                    if sd is not None:
-                        source_semantic_domains.append(sd)
+                    source_semantic_domains.extend(util.get_semantic_domains_from_sense(sense))
+                source_semantic_domains = [sd.strip() for sd in source_semantic_domains]
                 source_semantic_domains = list(set(source_semantic_domains))
+                source_semantic_domains.sort()
                 if len(source_semantic_domains) > 0:
-                    source_semantic_domains.sort()
                     for sense in target_senses:
-                        sd_string = ' ; '.join(source_semantic_domains)
                         # Replace semantic domain value in target.
                         #   NOTE: Is it worth comparing with existing value before replacing?
                         #   E.g. Many files have the same SD #, but use either FR or EN text with it.
-                        allow_overwrite = True
-                        util.update_semantic_domain(sd_string, sense, allow_overwrite)
+                        util.update_semantic_domain(source_semantic_domains, sense, allow_overwrite)
 
         # Create updated target file, preserving original.
         try:
