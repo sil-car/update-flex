@@ -60,8 +60,6 @@ class App(Tk):
                 self.print_debug_variables()
 
             # Process files.
-            # file_list = '\n'.join([str(f) for f in self.target_files])
-            # print(f"Taking \"{','.join(self.updates.get('glosses'))}\" text from lexical-units and/or glosses from \"{self.source_file}\" to update glosses in:\n{file_list}")
             for target_file in self.target_files:
                 if self.debug:
                     print(f"Debug: {target_file = }")
@@ -144,6 +142,9 @@ class App(Tk):
                     # Combine source file's lexical-unit of same lang and lang's gloss.
                     #   NOTE: Is it worth comparing with existing value before replacing?
                     source_glosses.extend(util.get_glosses_from_sense(lang, sense))
+                source_glosses = [g.strip() for g in source_glosses]
+                source_glosses = list(set(source_glosses))
+                source_glosses.sort()
                 if len(source_glosses) > 0:
                     for sense in target_senses:
                         util.update_gloss(lang, source_glosses, sense, self.updates.get('allow-overwrite', False))
