@@ -27,8 +27,7 @@ def get_cawl_dict(xml_tree, cawl_type):
 def parse_glosses_string_to_list(glosses_string):
     d = ' '
     glosses = re.sub(r'[^a-z]+', d, glosses_string.lower()).split(d)
-    glosses = list(set(glosses))
-    glosses.sort()
+    glosses = normalize_list(glosses)
     return glosses
 
 def update_timestamps(sense):
@@ -74,8 +73,7 @@ def get_glosses_from_sense(lang, sense):
     gloss = get_lang_gloss_from_sense(sense, lang)
     if gloss is not None:
         glosses_raw.append(gloss)
-    glosses_raw = list(set(glosses_raw))
-    glosses_raw.sort()
+    glosses_raw = normalize_list(glosses_raw)
 
     # Consolidate repeated terms in glosses.
     glosses = []
@@ -83,8 +81,7 @@ def get_glosses_from_sense(lang, sense):
         gs = g_raw.split(';')
         gs = list(set([g.strip() for g in gs]))
         glosses.extend(gs)
-    glosses = list(set(glosses))
-    glosses.sort()
+    glosses = normalize_list(glosses)
 
     return glosses
 
@@ -132,8 +129,7 @@ def get_semantic_domains_from_sense(sense):
             sd = trait.get('value')
             if sd is not None:
                 semantic_domains_raw.append(sd)
-    semantic_domains_raw = list(set(semantic_domains_raw))
-    semantic_domains_raw.sort()
+    semantic_domains_raw = normalize_list(semantic_domains_raw)
 
     # Consolidate repeated terms.
     semantic_domains = []
@@ -141,8 +137,7 @@ def get_semantic_domains_from_sense(sense):
         sds = sd_raw.split(';')
         sds = list(set([sd.strip() for sd in sds]))
         semantic_domains.extend(sds)
-    semantic_domains = list(set(semantic_domains))
-    semantic_domains.sort()
+    semantic_domains = normalize_list(semantic_domains)
 
     return semantic_domains
 
@@ -201,6 +196,47 @@ def update_semantic_domain(semantic_domains, sense, allow_overwrite):
         updated = True
     if updated:
         update_timestamps(sense)
+
+def dedupe_glosses(lang, sense):
+    pass
+
+def dedupe_semantic_domains(sense):
+    # Gather all existing semantic domain info.
+    sd_texts = []
+    traits = sense.findall('trait')
+    for trait in traits:
+        if trait.get('name') == 'semantic-domain-ddp4':
+            sd_texts.append(trait.get('value'))
+    sd_texts = normalize_list(sd_texts)
+
+    # Consolidate into a single updated string.
+    semantic_domains = []
+    for sd_text in sd_texts:
+        sds = sd_text.split(';')
+        sds = normalize_list(sds)
+        semantic_domains.extend(sds)
+    updated_sd_text = ' ; '.join(semantic_domains)
+
+    # Update 1st instance & remove all others.
+    updated = False
+    for trait in traits:
+        if trait.get('name') == 'semantic-domain-ddp4':
+            if not updated:
+                if trait.get('value') != updated_sd_text:
+                    trait.attrib['value'] = updated_sd_text
+                    updated = True
+            else:
+                sense.remove(trait)
+
+
+def normalize_list(mylist):
+    # Strip whitespace.
+    mylist = [t.strip() for t in mylist]
+    # Deduplicate items.
+    mylist = list(set(mylist))
+    # Sort alphabetically.
+    mylist.sort()
+    return mylist
 
 def parse_cli():
     # Define arguments and options.
