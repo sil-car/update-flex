@@ -198,7 +198,35 @@ def update_semantic_domain(semantic_domains, sense, allow_overwrite):
         update_timestamps(sense)
 
 def dedupe_glosses(lang, sense):
-    pass
+    # Gather all existing glosses.
+    glosses_texts = []
+    all_glosses = sense.findall('gloss')
+    for gloss in all_glosses:
+        if gloss.get('lang') == lang:
+            gloss_elem = gloss.find('text')
+            glosses_texts.append(gloss_elem.text)
+    glosses_texts = normalize_list(glosses_texts)
+
+    # Consolidate into a single updated string.
+    glosses = []
+    for glosses_text in glosses_texts:
+        gs = glosses_text.split(';')
+        gs = normalize_list(gs)
+        glosses.extend(gs)
+    updated_glosses_text = ' ; '.join(glosses)
+
+    # Update 1st instance & remove all others.
+    updated = False
+    for gloss in all_glosses:
+        if gloss.get('lang') == lang:
+            if not updated:
+                g_elem = gloss.find('text')
+                if g_elem.text != updated_glosses_text:
+                    g_elem.text = updated_glosses_text
+                    updated = True
+            else:
+                print(f"removed gloss {gloss}")
+                sense.remove(gloss)
 
 def dedupe_semantic_domains(sense):
     # Gather all existing semantic domain info.
@@ -226,6 +254,7 @@ def dedupe_semantic_domains(sense):
                     trait.attrib['value'] = updated_sd_text
                     updated = True
             else:
+                print(f"removed trait {trait}")
                 sense.remove(trait)
 
 

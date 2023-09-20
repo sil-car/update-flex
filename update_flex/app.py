@@ -149,6 +149,7 @@ class App(Tk):
                 source_glosses = util.normalize_list(source_glosses)
                 if len(source_glosses) > 0:
                     for sense in target_senses:
+                        util.dedupe_glosses(lang, sense)
                         util.update_gloss(lang, source_glosses, sense, allow_overwrite)
 
             # Update semantic domain.
