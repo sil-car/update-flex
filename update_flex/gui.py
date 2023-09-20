@@ -111,7 +111,7 @@ class Gui(Frame):
         self.reset_btn.bind("<ButtonRelease>", self.reset_widgets)
         # Row 7: Create Status Label.
         self.status_lab = Label(self, text="")
-        self.status_lab.grid(column=3, row=7, columnspan=2, padx=pad, pady=pady, sticky='W')
+        self.status_lab.grid(column=2, row=7, columnspan=2, padx=pad, pady=pady, sticky='W')
 
         # Set initial state of widgets.
         self.reset_widgets('RESET')
@@ -146,12 +146,7 @@ class Gui(Frame):
 
         # Export to pretty-print LIFT if Source is chosen but not Target.
         if self.app.source_file is not None and len(self.app.target_files) == 0:
-            xml_string = util.xml_tree_to_string(util.get_xml_tree(self.app.source_file))
-            new_file_name = f"{self.app.source_file.stem}_formatted.lift"
-            new_file_obj = self.app.source_file.with_name(new_file_name)
-            if self.app.debug:
-                print(f"Debug: {str(new_file_obj) = }")
-            new_file_obj.write_text(xml_string)
+            self.export_pprint_file()
             return
 
         # Get CAWL types.
@@ -208,6 +203,16 @@ class Gui(Frame):
             self.app.target_files = [Path(selected_file)]
             self.app.target_xml = util.get_xml_tree(self.app.target_files[0])
         self.verify_update_btn_state()
+
+    def export_pprint_file(self):
+        xml_string = util.xml_tree_to_string(util.get_xml_tree(self.app.source_file))
+        new_file_name = f"{self.app.source_file.stem}_formatted.lift"
+        new_file_obj = self.app.source_file.with_name(new_file_name)
+        if self.app.debug:
+            print(f"Debug: {str(new_file_obj) = }")
+        new_file_obj.write_text(xml_string)
+        self.status_lab['text'] = f"{self.app.source_file} exported as \"{new_file_name}\"."
+        
 
     def update_file(self):
         result = self.app.update_file(self.app.target_files[0])
