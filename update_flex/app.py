@@ -146,9 +146,7 @@ class App(Tk):
                     # Combine source file's lexical-unit of same lang and lang's gloss.
                     #   NOTE: Is it worth comparing with existing value before replacing?
                     source_glosses.extend(util.get_glosses_from_sense(lang, sense))
-                source_glosses = [g.strip() for g in source_glosses]
-                source_glosses = list(set(source_glosses))
-                source_glosses.sort()
+                source_glosses = util.normalize_list(source_glosses)
                 if len(source_glosses) > 0:
                     for sense in target_senses:
                         util.update_gloss(lang, source_glosses, sense, allow_overwrite)
@@ -159,14 +157,13 @@ class App(Tk):
                 source_semantic_domains = []
                 for sense in source_senses:
                     source_semantic_domains.extend(util.get_semantic_domains_from_sense(sense))
-                source_semantic_domains = [sd.strip() for sd in source_semantic_domains]
-                source_semantic_domains = list(set(source_semantic_domains))
-                source_semantic_domains.sort()
+                source_semantic_domains = util.normalize_list(source_semantic_domains)
                 if len(source_semantic_domains) > 0:
                     for sense in target_senses:
                         # Replace semantic domain value in target.
                         #   NOTE: Is it worth comparing with existing value before replacing?
                         #   E.g. Many files have the same SD #, but use either FR or EN text with it.
+                        util.dedupe_semantic_domains(sense)
                         util.update_semantic_domain(source_semantic_domains, sense, allow_overwrite)
 
         # Create updated target file, preserving original.
