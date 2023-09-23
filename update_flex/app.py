@@ -11,13 +11,14 @@ class App(Tk):
     def __init__(self, cli_args, **kwargs):
         super().__init__(**kwargs)
         self.classname = kwargs.get('className')
-        self.title("Update fields in FLEx LIFT file")
+        self.version = util.get_version_string()
+        self.title(f"Update fields in FLEx LIFT file - v{self.version}")
 
         self.args = cli_args
 
         # Handle 'version' option.
         if self.args.version:
-            print(util.get_version_string())
+            print(self.version)
             exit()
 
         # Define default values.
