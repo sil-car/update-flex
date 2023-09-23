@@ -244,6 +244,7 @@ def dedupe_semantic_domains(sense):
         sds = sd_text.split(';')
         sds = normalize_list(sds)
         semantic_domains.extend(sds)
+    semantic_domains = normalize_list(semantic_domains)
     updated_sd_text = ' ; '.join(semantic_domains)
 
     # Update 1st instance & remove all others.
@@ -253,7 +254,7 @@ def dedupe_semantic_domains(sense):
             if not updated:
                 if trait.get('value') != updated_sd_text:
                     trait.attrib['value'] = updated_sd_text
-                    updated = True
+                updated = True
             else:
                 print(f"removed trait {trait}")
                 sense.remove(trait)
