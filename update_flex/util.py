@@ -1,9 +1,27 @@
 import argparse
 import datetime
+import importlib.metadata
 import re
 
 from lxml import etree
+from pathlib import Path
 
+
+def get_version_string():
+    version_string = 'unknown'
+    try:
+        version_string = importlib.metadata.version('update-flex')
+    except importlib.metadata.PackageNotFoundError:
+        # Running as script rather than installed package.
+        toml_file = Path(__file__).parents[1] / 'pyproject.toml'
+        with toml_file.open() as f:
+            lines = f.readlines()
+        for line in lines:
+            if line[:7] == 'version':
+                version_string = line.split('=')[1].strip().strip('"')
+            if version_string != 'unknown':
+                break
+    return version_string
 
 def get_outfile_object(old_file_obj, tag, debug):
     new_file_name = f"{old_file_obj.stem}{tag}.lift"
@@ -272,17 +290,17 @@ def normalize_list(mylist):
 def parse_cli():
     # Define arguments and options.
     parser = argparse.ArgumentParser(
-        description="Show or update FLEx database files in LIFT format.",
+        description="show or update FLEx database files in LIFT format",
     )
     parser.add_argument(
         "source_db",
         nargs='?',
-        help="The source file to get updates from.",
+        help="the source file to get updates from",
     )
     parser.add_argument(
         "target_db",
         nargs='*', # require 0 or more targets
-        help="The target file(s) to be shown or updated.",
+        help="the target file(s) to be shown or updated",
     )
     parser.add_argument(
         '-d', '--debug',
@@ -291,24 +309,29 @@ def parse_cli():
     )
     parser.add_argument(
         '-g', '--glosses',
-        help="Update glosses in target file(s) with given language(s) from source file. Defaults to the language of the source file's 'lexical-unit', but this can be used to specify a language from the entry's glosses instead.",
+        help="update glosses in target file(s) with given language(s) from source file; defaults to the language of the source file's 'lexical-unit', but this can be used to specify a language from the entry's glosses instead",
     )
     parser.add_argument(
         '-i', '--source-id-type',
-        help="The value used in the source's 'type' attribute to designate a CAWL entry. [CAWL]",
+        help="the value used in the source's 'type' attribute to designate a CAWL entry [CAWL]",
     )
     parser.add_argument(
         '-I', '--target-id-type',
-        help="The value used in the target's 'type' attribute to designate a CAWL entry. [CAWL]",
+        help="the value used in the target's 'type' attribute to designate a CAWL entry [CAWL]",
     )
     parser.add_argument(
         '-o', '--allow-overwrite',
-        help="Allow glosses in target file(s) to be overwritten. [False]",
+        help="allow glosses in target file(s) to be overwritten [False]",
         action='store_true',
     )
     parser.add_argument(
         '-s', '--semantic-domain',
-        help="Update semantic domain info from source file to target file(s).",
+        help="update semantic domain info from source file to target file(s)",
+        action='store_true',
+    )
+    parser.add_argument(
+        '-V', '--version',
+        help="show app version",
         action='store_true',
     )
     return parser.parse_args()

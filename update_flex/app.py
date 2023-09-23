@@ -15,6 +15,11 @@ class App(Tk):
 
         self.args = cli_args
 
+        # Handle 'version' option.
+        if self.args.version:
+            print(util.get_version_string())
+            exit()
+
         # Define default values.
         self.source_cawl_type_default = 'CAWL'
         self.source_file_default = None
