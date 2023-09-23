@@ -213,6 +213,7 @@ def dedupe_glosses(lang, sense):
         gs = glosses_text.split(';')
         gs = normalize_list(gs)
         glosses.extend(gs)
+    glosses = normalize_list(glosses)
     updated_glosses_text = ' ; '.join(glosses)
 
     # Update 1st instance & remove all others.
@@ -223,7 +224,7 @@ def dedupe_glosses(lang, sense):
                 g_elem = gloss.find('text')
                 if g_elem.text != updated_glosses_text:
                     g_elem.text = updated_glosses_text
-                    updated = True
+                updated = True
             else:
                 print(f"removed gloss {gloss}")
                 sense.remove(gloss)
